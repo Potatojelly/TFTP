@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <unistd.h> // for close socket
 
 #define SERV_UDP_PORT 61123 
 
