@@ -5,7 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h> // for close socket
-#include <arpa/inet.h> /for inet_addr()
+#include <arpa/inet.h> //for inet_addr()
 
 #define SERV_UDP_PORT 61123 
 #define SERV_HOST_ADDR "127.0.0.1" //"10.158.82.32" 
@@ -72,18 +72,18 @@ void tftp_cli(int sockfd, struct sockaddr *pserv_addr, int servlen)
         
        short blockNum = 1;
        // check opcode
-       if(ntohs(*(short*) stream) == DATA) 
+       if(ntohs(*(short*) stream) == DATA) // receive DATA
        {
             // make a file with DATA
-	    *(short*) (stream +2) = htons(blockNum);   
-            printf("Received block #%d of data\n",blockNum);
+	        *(short*) (stream +2) = htons(blockNum);   
+            printf("Received Block #%d of data: %d byte(s)\n",blockNum,n);
             FILE * fp = fopen(fileName,"w");
             fwrite(stream+4,1,n-4,fp); // write 512 bytes
             fclose(fp);
        } 
-       else if(ntohs(*(short*) stream) == ACK) 
+       else if(ntohs(*(short*) stream) == ACK) //receive ACK
        {    
-	    *(short*) (stream +2) = htons(blockNum);    
+            *(short*) (stream +2) = htons(blockNum);    
             printf("Received Ack #%d\n",blockNum);
             bzero(&stream,SSIZE);
             FILE *fp = fopen(fileName,"r");
@@ -94,17 +94,17 @@ void tftp_cli(int sockfd, struct sockaddr *pserv_addr, int servlen)
             }
             // send DATA
             *(short*) stream = htons(DATA);
-            *(short*) (stream+2) = blockNum;
+            *(short*) (stream+2) = htons(blockNum);
             n = fread(stream+4,1,512,fp) + 4; // 4byte is for opcode and block number
             if(sendto(sockfd,stream,n,0,pserv_addr,servlen) != n)
             {
                 printf("%s: sendto error on socket\n",progname);
                 exit(3);
             }   
-	    else
-	    {
-		printf("Sending block #%d of data\n",blockNum);
-	    }
+            else
+            {
+            printf("Sending Block #%d of data: %d byte(s)\n",blockNum,n);
+            }
             fclose(fp); 
        }
 

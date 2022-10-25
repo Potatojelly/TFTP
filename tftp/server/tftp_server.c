@@ -40,9 +40,9 @@ void tftp_serv(int sockfd)
         char fileName[20];
 		char mode[10];
         char * p;
-        
+        short blockNum = 1;
         // starts parsing stream
-        if(ntohs(*(short*) stream) == RRQ)  
+        if(ntohs(*(short*) stream) == RRQ)  // recevied RRQ
         {
             printf("Received[Read Request]\n"); 
             p = stream + 2;
@@ -51,8 +51,6 @@ void tftp_serv(int sockfd)
             strcpy(mode,p); // get MODE
 
             bzero(stream,SSIZE); // clear stream
-			
-            short blockNum = 1;
 
         // send DATA
             FILE *fp = fopen(fileName,"r");
@@ -64,7 +62,7 @@ void tftp_serv(int sockfd)
 
 
             *(short*) stream = htons(DATA);
-            *(short*) (stream+2) = blockNum;
+            *(short*) (stream+2) = htons(blockNum);
             n = fread(stream+4,1,512,fp) + 4;
             if (sendto(sockfd, stream, n, 0, &pcli_addr, clilen) != n)
             {
@@ -73,12 +71,12 @@ void tftp_serv(int sockfd)
             }  
             else
 	    {
-		printf("Sending block #%d of data\n",blockNum);
+		printf("Sending Block #%d of data: %d byte(s)\n",blockNum,n);
 	    }
 		   
             fclose(fp);
         } 
-        else if(ntohs(*(short*) stream) == WRQ) // 
+        else if(ntohs(*(short*) stream) == WRQ) // recevied WRQ
         {
             printf("Received[Write Request]\n");
             p = stream + 2;
@@ -89,7 +87,7 @@ void tftp_serv(int sockfd)
             bzero(stream,SSIZE);
             
             // send ACK
-	    blockNum = 0;
+	        blockNum = 0;
             *(short*) stream =  htons(ACK);
             *(short*) (stream +2) = blockNum;
             if (sendto(sockfd, stream, 4, 0, &pcli_addr, clilen) != 4)
@@ -101,20 +99,20 @@ void tftp_serv(int sockfd)
             {
                 printf("Sending Ack# %d\n",blockNum);
             }
-             bzero(stream,SSIZE);
+            bzero(stream,SSIZE);
 
             // receive DATA
             n = recvfrom(sockfd, stream, SSIZE, 0, &pcli_addr, &clilen);
-	    blockNum = ntohs(*(short*)(stream+2));
+	        blockNum = ntohs(*(short*)(stream+2));
             if (n < 0)
             {
                 printf("%s: recvfrom error\n",progname);
                 exit(3);
             } 
-	    else
-	    {
-		printf("Received Block #%d! of data: %d byte(s)\n",blockNum,n);
-	    }
+            else
+            {
+                printf("Received Block #%d of data: %d byte(s)\n",blockNum,n);
+            }
 			
             
             // make a file with DATA
