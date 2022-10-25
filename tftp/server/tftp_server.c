@@ -52,7 +52,7 @@ void tftp_serv(int sockfd)
 
             bzero(stream,SSIZE); // clear stream
 			
-            int blockNum = 0;
+            short blockNum = 1;
 
         // send DATA
             FILE *fp = fopen(fileName,"r");
@@ -71,6 +71,11 @@ void tftp_serv(int sockfd)
                 printf("%s: sendto error\n",progname);
                 exit(4);
             }  
+            else
+	    {
+		printf("Sending block #%d of data\n",blockNum);
+	    }
+		   
             fclose(fp);
         } 
         else if(ntohs(*(short*) stream) == WRQ) // 
@@ -81,11 +86,10 @@ void tftp_serv(int sockfd)
             p += strlen(fileName) + 1;
             strcpy(mode,p);
 
-            int blockNum = 0;
-
             bzero(stream,SSIZE);
             
             // send ACK
+	    blockNum = 0;
             *(short*) stream =  htons(ACK);
             *(short*) (stream +2) = blockNum;
             if (sendto(sockfd, stream, 4, 0, &pcli_addr, clilen) != 4)
