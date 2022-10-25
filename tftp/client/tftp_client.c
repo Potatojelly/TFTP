@@ -70,18 +70,21 @@ void tftp_cli(int sockfd, struct sockaddr *pserv_addr, int servlen)
             exit(4);
         }
         
+       short blockNum = 1;
        // check opcode
        if(ntohs(*(short*) stream) == DATA) 
        {
             // make a file with DATA
-            printf("DATA RECEIVED");
+	    *(short*) (stream +2) = htons(blockNum);   
+            printf("Received block #%d of data\n",blockNum);
             FILE * fp = fopen(fileName,"w");
             fwrite(stream+4,1,n-4,fp); // write 512 bytes
             fclose(fp);
        } 
        else if(ntohs(*(short*) stream) == ACK) 
        {    
-            printf("ACK RECEIVED");
+	    *(short*) (stream +2) = htons(blockNum);    
+            printf("Received Ack #%d\n",blockNum);
             bzero(&stream,SSIZE);
             FILE *fp = fopen(fileName,"r");
             if(fp == NULL)
@@ -90,7 +93,6 @@ void tftp_cli(int sockfd, struct sockaddr *pserv_addr, int servlen)
                 exit(4);
             }
             // send DATA
-            int blockNum = 1;
             *(short*) stream = htons(DATA);
             *(short*) (stream+2) = blockNum;
             n = fread(stream+4,1,512,fp) + 4; // 4byte is for opcode and block number
@@ -98,7 +100,11 @@ void tftp_cli(int sockfd, struct sockaddr *pserv_addr, int servlen)
             {
                 printf("%s: sendto error on socket\n",progname);
                 exit(3);
-            }    
+            }   
+	    else
+	    {
+		printf("Sending block #%d of data\n",blockNum);
+	    }
             fclose(fp); 
        }
 
