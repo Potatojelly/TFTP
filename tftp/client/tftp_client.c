@@ -4,6 +4,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <unistd.h> // for close socket
+#include <arpa/inet.h> /for inet_addr()
 
 #define SERV_UDP_PORT 61123 
 #define SERV_HOST_ADDR "127.0.0.1" //"10.158.82.32" 
