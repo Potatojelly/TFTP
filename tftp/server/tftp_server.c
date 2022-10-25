@@ -33,10 +33,10 @@ void tftp_serv(int sockfd)
         // receive a request 
         n = recvfrom(sockfd, stream, SSIZE, 0, &pcli_addr, &clilen);
         if (n < 0)
-	    {
-		    printf("%s: recvfrom error\n",progname);
-		    exit(3);
-	    }        
+	{
+		printf("%s: recvfrom error\n",progname);
+		exit(3);
+	}           
         char fileName[20];
 		char mode[10];
         char * p;
@@ -44,7 +44,7 @@ void tftp_serv(int sockfd)
         // starts parsing stream
         if(ntohs(*(short*) stream) == RRQ)  
         {
-            printf("RRQ RECEIVED!\n");
+            printf("Received[Read Request]\n"); 
             p = stream + 2;
             strcpy(fileName,p); //get FILENAME
             p += strlen(fileName) + 1; // 1 is for null 
@@ -75,7 +75,7 @@ void tftp_serv(int sockfd)
         } 
         else if(ntohs(*(short*) stream) == WRQ) // 
         {
-            printf("WRQ RECEIVED!\n");
+            printf("Received[Write Request]\n");
             p = stream + 2;
             strcpy(fileName,p);
             p += strlen(fileName) + 1;
@@ -95,22 +95,27 @@ void tftp_serv(int sockfd)
             }
             else 
             {
-                printf("ACK SENDED\n");
+                printf("Sending Ack# %d\n",blockNum);
             }
              bzero(stream,SSIZE);
 
             // receive DATA
             n = recvfrom(sockfd, stream, SSIZE, 0, &pcli_addr, &clilen);
+	    blockNum = ntohs(*(short*)(stream+2));
             if (n < 0)
             {
                 printf("%s: recvfrom error\n",progname);
                 exit(3);
-            }        
+            } 
+	    else
+	    {
+		printf("Received Block #%d! of data: %d byte(s)\n",blockNum,n);
+	    }
+			
             
             // make a file with DATA
             FILE * fp = fopen(fileName,"w");
 		    fwrite(stream+4,1,n-4,fp);
-            printf("DATA RECEIVED\n");
             fclose(fp);
         }
 
