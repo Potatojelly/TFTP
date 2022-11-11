@@ -25,7 +25,7 @@ struct tftp* tftp_init(char* name)
 // build server socket
 void build_servSocket(struct tftp *my_tftp, int port)
 {
-  if(port <= 0 && port >= 65535){
+  if(port <= 0 || port >= 65535){
     port = SERV_UDP_PORT;
   }
   
@@ -54,7 +54,7 @@ void build_servSocket(struct tftp *my_tftp, int port)
 // build client socket
 void build_cliSocket(struct tftp *my_tftp, int port)
 {
-  if(port <= 0 && port >= 65535){
+  if(port <= 0 || port >= 65535){
     port = SERV_UDP_PORT;
   }
   
