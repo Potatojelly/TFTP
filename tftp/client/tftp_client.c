@@ -1,4 +1,4 @@
-#include "../Common/tftp.h"
+#include "../common/tftp.h"
 
 void run_client(struct tftp *my_tftp)
 {
