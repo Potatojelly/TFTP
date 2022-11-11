@@ -22,7 +22,7 @@ void run_client(struct tftp *my_tftp)
         opc = my_tftp->get_opc(my_tftp, stream);
         if(opc == RRQ)
         {
-            fp = fopen(fileName,"w");a
+            fp = fopen(fileName,"w");
         }
         else if(opc == WRQ)
         {
@@ -71,14 +71,17 @@ void run_client(struct tftp *my_tftp)
 int main(int argc, char *argv[])
 {
     struct tftp *cli_tftp = tftp_init(argv[0]);
-    
-    if(argc == 3 && argv[1] == "-p"){
+    // printf("argv[1]:%s\n",argv[1]);
+    // printf("argv[2]:%s\n",argv[2]);
+    // printf("argc:%d\n",argc);
+    if(argc == 3 && strcmp(argv[1],"-p") == 0)
+    {
       cli_tftp->build_cli(cli_tftp, atoi(argv[2]));
     }
-    else{
+    else
+    {
       cli_tftp->build_cli(cli_tftp, -1);
     }
-    
     
     run_client(cli_tftp);
 

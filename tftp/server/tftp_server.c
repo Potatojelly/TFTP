@@ -82,11 +82,12 @@ void run_server(struct tftp* my_tftp)
 int main(int argc, char *argv[])
 {
     struct tftp *serv_tftp = tftp_init(argv[0]);
-    
-    if(argc == 3 && argv[1] == "-p"){
+    if(argc == 3 && strcmp(argv[1],"-p") == 0)
+    {
       serv_tftp->build_serv(serv_tftp, atoi(argv[2]));
     }
-    else{
+    else
+    {
       serv_tftp->build_serv(serv_tftp, -1);
     }
 
