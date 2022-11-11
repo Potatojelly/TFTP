@@ -71,7 +71,7 @@ void run_server(struct tftp* my_tftp)
                 }
                 blockNum++;
             } while (n == 516);
-        }    
+        }  
         fclose(fp);
     }
 
@@ -82,7 +82,13 @@ void run_server(struct tftp* my_tftp)
 int main(int argc, char *argv[])
 {
     struct tftp *serv_tftp = tftp_init(argv[0]);
-    serv_tftp->build_serv(serv_tftp);
+    
+    if(argc == 3 && argv[1] == "-p"){
+      serv_tftp->build_serv(serv_tftp, atoi(argv[2]));
+    }
+    else{
+      serv_tftp->build_serv(serv_tftp, -1);
+    }
 
     run_server(serv_tftp);
 
