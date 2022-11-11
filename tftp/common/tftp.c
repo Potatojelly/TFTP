@@ -24,57 +24,65 @@ struct tftp* tftp_init(char* name)
 // build server socket
 void build_servSocket(struct tftp *my_tftp, int port)
 {
-    if(port <= 0 && port >= 65535){
-      port = SERV_UDP_PORT;
-    }
-    
-    my_tftp->type = SERVER;
-    if((my_tftp->sockfd = socket(AF_INET,SOCK_DGRAM,0)) < 0)
-    {
-       	printf("%s: can't open datagram socket\n",*(my_tftp->progname));
-		exit(1);
-    }
-    bzero((char *) &(my_tftp->cli_addr), sizeof(my_tftp->cli_addr));
-    my_tftp->cli_addr.sin_family = AF_INET;
-    my_tftp->cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    my_tftp->cli_addr.sin_port = htons(port);
-        
-    if(bind(my_tftp->sockfd, (struct sockaddr *) &(my_tftp->cli_addr), my_tftp->clilen) < 0)
-    {
-		printf("%s: can't bind local address\n",my_tftp->progname);
-		exit(2);
-    }
+  if(port <= 0 && port >= 65535){
+    port = SERV_UDP_PORT;
+  }
+  
+  my_tftp->type = SERVER;
+  if((my_tftp->sockfd = socket(AF_INET,SOCK_DGRAM,0)) < 0)
+  {
+    printf("%s: can't open datagram socket\n",*(my_tftp->progname));
+    exit(1);
+  }
+  bzero((char *) &(my_tftp->cli_addr), sizeof(my_tftp->cli_addr));
+  my_tftp->cli_addr.sin_family = AF_INET;
+  my_tftp->cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  my_tftp->cli_addr.sin_port = htons(port);
+      
+  if(bind(my_tftp->sockfd, (struct sockaddr *) &(my_tftp->cli_addr), my_tftp->clilen) < 0)
+  {
+    printf("%s: can't bind local address\n",my_tftp->progname);
+    exit(2);
+  }
+  else
+  {
+    printf("%s: PORT NUMBER:%d\n",my_tftp->progname,port); // check port num
+  }
 }
 
 // build client socket
 void build_cliSocket(struct tftp *my_tftp, int port)
 {
-    if(port <= 0 && port >= 65535){
-      port = SERV_UDP_PORT;
-    }
-    
-    my_tftp->type = CLIENT;
-    if((my_tftp->sockfd = socket(AF_INET,SOCK_DGRAM,0)) < 0)
-    {
-       	printf("%s: can't open datagram socket\n",*(my_tftp->progname));
-		exit(1);
-    }
-    // cli addr
-    bzero((char *) &my_tftp->cli_addr, sizeof(my_tftp->cli_addr));
-    my_tftp->cli_addr.sin_family = AF_INET;
-    my_tftp->cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    my_tftp->cli_addr.sin_port = htons(0);
-    // serv addr
-    bzero((char *) &(my_tftp->serv_addr), sizeof(my_tftp->serv_addr));
-    my_tftp->serv_addr.sin_family = AF_INET;
-    my_tftp->serv_addr.sin_addr.s_addr = inet_addr(SERV_HOST_ADDR);
-    my_tftp->serv_addr.sin_port = htons(port);
-        
-    if(bind(my_tftp->sockfd, (struct sockaddr *) &(my_tftp->cli_addr), my_tftp->clilen) < 0)
-    {
-		printf("%s: can't bind local address\n",my_tftp->progname);
-		exit(2);
-    }
+  if(port <= 0 && port >= 65535){
+    port = SERV_UDP_PORT;
+  }
+  
+  my_tftp->type = CLIENT;
+  if((my_tftp->sockfd = socket(AF_INET,SOCK_DGRAM,0)) < 0)
+  {
+    printf("%s: can't open datagram socket\n",*(my_tftp->progname));
+    exit(1);
+  }
+  // cli addr
+  bzero((char *) &my_tftp->cli_addr, sizeof(my_tftp->cli_addr));
+  my_tftp->cli_addr.sin_family = AF_INET;
+  my_tftp->cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  my_tftp->cli_addr.sin_port = htons(0);
+  // serv addr
+  bzero((char *) &(my_tftp->serv_addr), sizeof(my_tftp->serv_addr));
+  my_tftp->serv_addr.sin_family = AF_INET;
+  my_tftp->serv_addr.sin_addr.s_addr = inet_addr(SERV_HOST_ADDR);
+  my_tftp->serv_addr.sin_port = htons(port);
+      
+  if(bind(my_tftp->sockfd, (struct sockaddr *) &(my_tftp->cli_addr), my_tftp->clilen) < 0)
+  {
+    printf("%s: can't bind local address\n",my_tftp->progname);
+    exit(2);
+  }
+  else
+  {
+    printf("%s: PORT NUMBER:%d\n",my_tftp->progname,port); // check port num
+  }
 }
 
 // parse received request
@@ -164,9 +172,7 @@ int get_opcode(struct tftp *my_tftp, char* packet)
   {
     opcode = ERROR;
   }
-  else if(ntohs(*(short*) packet) == PORT){
-    opcode = PORT;
-  }
+
   return opcode;
 }
 
