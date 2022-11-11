@@ -25,12 +25,26 @@ void run_server(struct tftp* my_tftp)
         if(opc == RRQ)
         {   
             printf("Received[Read Request]\n");
-            fp = fopen(fileName,"r");
-            if(fp == NULL)
+            if(access(fileName,F_OK) == 0) // check if the file exists
             {
-                printf("%s: file not found error\n",my_tftp->progname);
-                exit(4);
+                if(access(fileName,R_OK) == 0)
+                {
+                    fp = fopen(fileName,"r");
+                }
+                else  // server has no permission to read the file
+                {
+                    bzero(stream,SSIZE); // clear stream
+                    my_tftp->send_err(my_tftp,stream,2);
+                    continue;
+                }
             }
+            else  // server doesn't have the requested file from client 
+            {
+                bzero(stream,SSIZE); // clear stream
+                my_tftp->send_err(my_tftp,stream,0);
+                continue;
+            }
+
             do
             {
                 bzero(stream,SSIZE); // clear stream
@@ -52,7 +66,17 @@ void run_server(struct tftp* my_tftp)
         else if(opc == WRQ)
         {
             printf("Received[Write Request]\n");
-            fp = fopen(fileName,"w");
+            if(access(fileName,F_OK) == 0) // check if the file exists
+            {
+                bzero(stream,SSIZE); 
+                my_tftp->send_err(my_tftp,stream,1);
+                continue;
+            }
+            else
+            {
+                fp = fopen(fileName,"w");
+            }
+
             do
             {
                 bzero(stream,SSIZE); // clear stream
@@ -76,8 +100,6 @@ void run_server(struct tftp* my_tftp)
     }
 
 }
-
-
 
 int main(int argc, char *argv[])
 {

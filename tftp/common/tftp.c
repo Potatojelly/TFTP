@@ -10,6 +10,7 @@ struct tftp* tftp_init(char* name)
   my_tftp->send_req = send_request;
   my_tftp->send_dta = send_data;
   my_tftp->send_ack = send_ack;
+  my_tftp->send_err = send_error;
   my_tftp->get_resp = get_response;
   my_tftp->get_opc = get_opcode;
   
@@ -230,4 +231,39 @@ int send_ack(struct tftp *my_tftp, char* packet, short blockNum)
       printf("Sending Ack# %d\n",blockNum);
   }
   return n;
+}
+
+// send ERROR
+int send_error(struct tftp *my_tftp, char* packet, short errCode)
+{
+  int sn;
+  int n = 4;
+  *(short*) packet =  htons(ERROR);
+  *(short*) (packet +2) = htons(errCode);
+  if(errCode == 0) // file not found
+  {
+    char errmsg[50] = "server: file not found error";
+    strcpy(packet+4,errmsg); 
+    n += strlen(errmsg) + 1;
+  }
+  else if(errCode == 1) // file already exist
+  {
+    char errmsg[70] = "server: file is already exist error(overwrite warning)";
+    strcpy(packet+4,errmsg); 
+    n += strlen(errmsg) + 1;
+  }
+  else if(errCode == 2) // no  permission
+  {
+    char errmsg[50] = "server: no permission to open the file error";
+    strcpy(packet+4,errmsg); 
+    n += strlen(errmsg) + 1;
+  }
+  sn = sendto(my_tftp->sockfd,packet,n,0,(struct sockaddr *)&(my_tftp->cli_addr),my_tftp->clilen);
+  if(sn != n)
+  {
+      printf("%s: sendto error on socket\n",my_tftp->progname);
+      exit(3);            
+  }
+  printf("Sending ERROR #%d\n",errCode);
+  return sn;
 }

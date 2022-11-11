@@ -32,6 +32,7 @@ struct tftp
     int (*send_req)(struct tftp *my_tftp, char* opc, char* fname, char* mode, char* packet);
     int (*send_dta)(struct tftp *my_tftp, FILE* fp, char* packet, short blockNum);
     int (*send_ack)(struct tftp *my_tftp, char* packet, short blockNum);
+    int (*send_err)(struct tftp *my_tftp, char* packet, short errCode);
     int (*get_resp)(struct tftp *my_tftp, char* packet);
     int (*get_opc)(struct tftp *my_tftp, char* packet);
     
@@ -51,5 +52,6 @@ void parse_request(char* fname, char* mode, char* packet);
 int send_request(struct tftp *my_tftp, char* opc, char* fname, char* mode, char* packet); 
 int send_data(struct tftp *my_tftp, FILE* fp, char* packet, short blockNum);
 int send_ack(struct tftp *my_tftp, char* packet, short blockNum);
+int send_error(struct tftp *my_tftp, char* packet, short errCode);
 int get_response(struct tftp *my_tftp, char* packet);
 int get_opcode(struct tftp *my_tftp, char* packet);

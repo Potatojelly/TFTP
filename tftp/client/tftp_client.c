@@ -16,24 +16,42 @@ void run_client(struct tftp *my_tftp)
         // receive input 
         scanf("%s" "%s", opcode,fileName);
 
-        // send request
-        n = my_tftp->send_req(my_tftp, opcode, fileName, MODE, stream);
         // open file
-        opc = my_tftp->get_opc(my_tftp, stream);
-        if(opc == RRQ)
+        if(strcmp("-r",opcode) == 0)
         {
-            fp = fopen(fileName,"w");
-        }
-        else if(opc == WRQ)
-        {
-            fp = fopen(fileName,"r");
-            if(fp == NULL)
+            if(access(fileName,F_OK) == 0) // check if the file already exists
             {
-                printf("%s: file not found error\n",my_tftp->progname);
-                exit(4);
+                printf("client: file is already exist error(overwrite warning)\n");
+                continue;
+            }
+            else
+            {
+                fp = fopen(fileName,"w");
+            }
+        }
+        else if(strcmp("-w",opcode) == 0)
+        {
+            if(access(fileName,F_OK) == 0) // check if the file exists
+            {
+                if(access(fileName,R_OK) == 0)
+                {
+                    fp = fopen(fileName,"r");
+                }
+                else  // client has no permission to read the file
+                {
+                    printf("client: no permission to open the file error\n");
+                    continue;
+                }
+            }
+            else // client doesn't have the file to write to server
+            {
+                printf("client: file not found error\n");
+                continue;
             }
         }
 
+        // send request
+        n = my_tftp->send_req(my_tftp, opcode, fileName, MODE, stream);
         bzero(&stream,SSIZE);
         
         do
@@ -62,9 +80,26 @@ void run_client(struct tftp *my_tftp)
                 n = my_tftp->send_dta(my_tftp,fp,stream,blockNum);
                 bzero(&stream,SSIZE); // clear stream
             }
+            else if(opc == ERROR)
+            {
+                short errCode = ntohs(*(short*)(stream+2));
+                char errMsg[50];
+                strcpy(errMsg,(stream+4));
+                printf("Received ERROR #%d: %s\n",errCode,errMsg);
+                fclose(fp);
+                fp = NULL;
+                if(errCode == 0 || errCode == 2) // not found or no permission
+                {
+                    remove(fileName); // remove the file created for reading from server
+                }
+                break;
+            }
         } while (n == 516);
 
-        fclose(fp);
+        if(fp != NULL)
+        {
+            fclose(fp);
+        }
     }
 }
 
