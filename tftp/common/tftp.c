@@ -4,7 +4,6 @@
 struct tftp* tftp_init(char* name) 
 {
 	struct tftp *my_tftp = malloc(sizeof(struct tftp));
-
   my_tftp->build_cli = build_cliSocket;
   my_tftp->build_serv = build_servSocket;
   my_tftp->parse_req = parse_request;
@@ -13,19 +12,22 @@ struct tftp* tftp_init(char* name)
   my_tftp->send_ack = send_ack;
   my_tftp->get_resp = get_response;
   my_tftp->get_opc = get_opcode;
-
+  
   my_tftp->sockfd = 0;
   my_tftp->clilen = sizeof(my_tftp->cli_addr);
   my_tftp->servlen = sizeof(my_tftp->serv_addr);
   my_tftp->progname = name;
   my_tftp->type = 0;
-
 	return my_tftp;
 }
 
 // build server socket
-void build_servSocket(struct tftp *my_tftp)
+void build_servSocket(struct tftp *my_tftp, int port)
 {
+    if(port <= 0 && port >= 65535){
+      port = SERV_UDP_PORT;
+    }
+    
     my_tftp->type = SERVER;
     if((my_tftp->sockfd = socket(AF_INET,SOCK_DGRAM,0)) < 0)
     {
@@ -35,7 +37,7 @@ void build_servSocket(struct tftp *my_tftp)
     bzero((char *) &(my_tftp->cli_addr), sizeof(my_tftp->cli_addr));
     my_tftp->cli_addr.sin_family = AF_INET;
     my_tftp->cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    my_tftp->cli_addr.sin_port = htons(SERV_UDP_PORT);
+    my_tftp->cli_addr.sin_port = htons(port);
         
     if(bind(my_tftp->sockfd, (struct sockaddr *) &(my_tftp->cli_addr), my_tftp->clilen) < 0)
     {
@@ -45,8 +47,12 @@ void build_servSocket(struct tftp *my_tftp)
 }
 
 // build client socket
-void build_cliSocket(struct tftp *my_tftp)
+void build_cliSocket(struct tftp *my_tftp, int port)
 {
+    if(port <= 0 && port >= 65535){
+      port = SERV_UDP_PORT;
+    }
+    
     my_tftp->type = CLIENT;
     if((my_tftp->sockfd = socket(AF_INET,SOCK_DGRAM,0)) < 0)
     {
@@ -62,7 +68,7 @@ void build_cliSocket(struct tftp *my_tftp)
     bzero((char *) &(my_tftp->serv_addr), sizeof(my_tftp->serv_addr));
     my_tftp->serv_addr.sin_family = AF_INET;
     my_tftp->serv_addr.sin_addr.s_addr = inet_addr(SERV_HOST_ADDR);
-    my_tftp->serv_addr.sin_port = htons(SERV_UDP_PORT);
+    my_tftp->serv_addr.sin_port = htons(port);
         
     if(bind(my_tftp->sockfd, (struct sockaddr *) &(my_tftp->cli_addr), my_tftp->clilen) < 0)
     {
@@ -157,6 +163,9 @@ int get_opcode(struct tftp *my_tftp, char* packet)
     else if(ntohs(*(short*) packet) == ERROR)
   {
     opcode = ERROR;
+  }
+  else if(ntohs(*(short*) packet) == PORT){
+    opcode = PORT;
   }
   return opcode;
 }
