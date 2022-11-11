@@ -1,4 +1,4 @@
-#include "../common/tftp.h"
+#include "../Common/tftp.h"
 
 void run_client(struct tftp *my_tftp)
 {
@@ -22,7 +22,7 @@ void run_client(struct tftp *my_tftp)
         opc = my_tftp->get_opc(my_tftp, stream);
         if(opc == RRQ)
         {
-            fp = fopen(fileName,"w");
+            fp = fopen(fileName,"w");a
         }
         else if(opc == WRQ)
         {
@@ -71,8 +71,15 @@ void run_client(struct tftp *my_tftp)
 int main(int argc, char *argv[])
 {
     struct tftp *cli_tftp = tftp_init(argv[0]);
-    cli_tftp->build_cli(cli_tftp);
-
+    
+    if(argc == 3 && argv[1] == "-p"){
+      cli_tftp->build_cli(cli_tftp, atoi(argv[2]));
+    }
+    else{
+      cli_tftp->build_cli(cli_tftp, -1);
+    }
+    
+    
     run_client(cli_tftp);
 
     close(cli_tftp->sockfd);
