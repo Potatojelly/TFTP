@@ -26,15 +26,15 @@
 
 struct tftp
 {
-    void (*build_serv)(struct tftp *my_tftp);
-    void (*build_cli)(struct tftp *my_tftp);
+    void (*build_serv)(struct tftp *my_tftp, int port);
+    void (*build_cli)(struct tftp *my_tftp, int port);
     void (*parse_req)(char* fname, char* mode, char* packet);
     int (*send_req)(struct tftp *my_tftp, char* opc, char* fname, char* mode, char* packet);
     int (*send_dta)(struct tftp *my_tftp, FILE* fp, char* packet, short blockNum);
     int (*send_ack)(struct tftp *my_tftp, char* packet, short blockNum);
     int (*get_resp)(struct tftp *my_tftp, char* packet);
     int (*get_opc)(struct tftp *my_tftp, char* packet);
-
+    
     int sockfd;
     struct sockaddr_in cli_addr;
     int clilen;
@@ -45,15 +45,14 @@ struct tftp
 };
 
 struct tftp* tftp_init(char* name);
-void build_servSocket(struct tftp *my_tftp);
-void build_cliSocket(struct tftp *my_tftp);
+void build_servSocket(struct tftp *my_tftp, int port);
+void build_cliSocket(struct tftp *my_tftp, int port);
 void parse_request(char* fname, char* mode, char* packet);
 int send_request(struct tftp *my_tftp, char* opc, char* fname, char* mode, char* packet); 
 int send_data(struct tftp *my_tftp, FILE* fp, char* packet, short blockNum);
 int send_ack(struct tftp *my_tftp, char* packet, short blockNum);
 int get_response(struct tftp *my_tftp, char* packet);
 int get_opcode(struct tftp *my_tftp, char* packet);
-
 
 // // implementation
 // struct tftp* tftp_init(char* name) 
@@ -263,5 +262,3 @@ int get_opcode(struct tftp *my_tftp, char* packet);
 //   }
 //   return n;
 // }
-
-
