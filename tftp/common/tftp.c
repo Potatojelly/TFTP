@@ -19,6 +19,7 @@ struct tftp* tftp_init(char* name)
   my_tftp->servlen = sizeof(my_tftp->serv_addr);
   my_tftp->progname = name;
   my_tftp->type = 0;
+  my_tftp->count = 0;
 	return my_tftp;
 }
 
@@ -192,7 +193,8 @@ int send_data(struct tftp *my_tftp, FILE* fp, char* packet, short blockNum)
     else if(my_tftp->type == CLIENT)
     {
       sn = sendto(my_tftp->sockfd,packet,n,0,(struct sockaddr *)&(my_tftp->serv_addr),my_tftp->servlen);
-    }    
+    }
+  
     if(sn != n)
     {
         printf("%s: sendto error on socket\n",my_tftp->progname);
@@ -267,3 +269,5 @@ int send_error(struct tftp *my_tftp, char* packet, short errCode)
   printf("Sending ERROR #%d\n",errCode);
   return sn;
 }
+
+

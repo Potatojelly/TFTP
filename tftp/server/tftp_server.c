@@ -1,109 +1,139 @@
 #include "../common/tftp.h"
 
-void run_server(struct tftp* my_tftp) 
-{
-    int n; // count bytes of stream sended or received
-    int opc;
-    char opcode[3];
-    char fileName[20];
-    char mode[10];
-    char stream[SSIZE];
-    FILE * fp = NULL;
-    
+struct tftp* serv_tftp;
+int count;
+int recByte = 0; 
+int snByte = 0;
+int opc;
+char opcode[3];
+char fileName[20];
+char mode[10];
+char outStream[SSIZE];
+char inStream[SSIZE];
+short blockNum = 0;
+FILE * fp = NULL;
+//void (*old_hanlder)() = 
 
+// alarm hanlder
+void retxDATA(int signal)
+{
+    count++;
+    if(count <= 10)
+    {
+        snByte = serv_tftp->send_dta(serv_tftp,fp,outStream,blockNum); 
+        alarm(2); 
+    }
+    else
+    {
+        printf("server: 10 consecutive timesouts has occurd.\n");
+        count = 0;
+        alarm(0);
+        fclose(fp);
+    }
+}
+
+void run_server() 
+{   
     while(1) 
     {
-        short blockNum = 0;
-        // receive request 
-        n = my_tftp->get_resp(my_tftp,stream);
-        // parse request
-        my_tftp->parse_req(fileName,mode,stream);
+        blockNum = 0;
+        // receive RQ
+        serv_tftp->get_resp(serv_tftp,inStream);
+        // parse RQ
+        serv_tftp->parse_req(fileName,mode,inStream);
         // get opcode
-        opc = my_tftp->get_opc(my_tftp, stream);
+        opc = serv_tftp->get_opc(serv_tftp, inStream);
         
-        // open file
         if(opc == RRQ)
         {   
             printf("Received[Read Request]\n");
-            if(access(fileName,F_OK) == 0) // check if the file exists
+            // open file
+            if(access(fileName,F_OK) == 0)                                                      // check if the file exists
             {
                 if(access(fileName,R_OK) == 0)
                 {
                     fp = fopen(fileName,"r");
                 }
-                else  // server has no permission to read the file
+                else                                                                            // server has no permission to read the file
                 {
-                    bzero(stream,SSIZE); // clear stream
-                    my_tftp->send_err(my_tftp,stream,2);
+                    bzero(outStream,SSIZE); 
+                    serv_tftp->send_err(serv_tftp,outStream,2);
                     continue;
                 }
             }
-            else  // server doesn't have the requested file from client 
+            else                                                                                 // server doesn't have the requested file from client 
             {
-                bzero(stream,SSIZE); // clear stream
-                my_tftp->send_err(my_tftp,stream,0);
+                bzero(outStream,SSIZE);
+                serv_tftp->send_err(serv_tftp,outStream,0);
                 continue;
             }
 
             do
             {
-                bzero(stream,SSIZE); // clear stream
-                // send data
-                n = my_tftp->send_dta(my_tftp,fp,stream,blockNum);
-                bzero(stream,SSIZE); // clear stream
-                my_tftp->get_resp(my_tftp,stream);
+                // send DATA 
+                bzero(outStream,SSIZE); 
+                snByte = serv_tftp->send_dta(serv_tftp,fp,outStream,blockNum); 
+
+                bzero(inStream,SSIZE);
+                serv_tftp->get_resp(serv_tftp,inStream);
                 // get opcode
-                opc = my_tftp->get_opc(my_tftp, stream);
-                // receive ack
+                opc = serv_tftp->get_opc(serv_tftp, inStream);
+                // receive ACK 
                 if(opc == ACK)
                 {
-                    blockNum = ntohs(*(short*)(stream+2));
+                    blockNum = ntohs(*(short*)(inStream+2));
                     printf("Received Ack #%d\n",blockNum);
                 }
                 blockNum++;
-            } while (n == 516);
+            } while (snByte == 516);
         }
         else if(opc == WRQ)
         {
             printf("Received[Write Request]\n");
-            if(access(fileName,F_OK) == 0) // check if the file exists
+            if(access(fileName,F_OK) == 0)                                                         // check if the file exists
             {
-                bzero(stream,SSIZE); 
-                my_tftp->send_err(my_tftp,stream,1);
+                bzero(outStream,SSIZE); 
+                // send ERR
+                serv_tftp->send_err(serv_tftp,outStream,1);         
                 continue;
             }
             else
             {
                 fp = fopen(fileName,"w");
+                // send ACK
+                bzero(outStream,SSIZE); 
+                serv_tftp->send_ack(serv_tftp, outStream, blockNum);    
             }
 
             do
             {
-                bzero(stream,SSIZE); // clear stream
-                // send ack
-                my_tftp->send_ack(my_tftp, stream, blockNum);
-                bzero(stream,SSIZE); // clear stream
-                // receive data
-                n = my_tftp->get_resp(my_tftp, stream);
+                // receive response
+                bzero(inStream,SSIZE); 
+                recByte = serv_tftp->get_resp(serv_tftp, inStream);
                 // get opcode
-                opc = my_tftp->get_opc(my_tftp, stream);
+                opc = serv_tftp->get_opc(serv_tftp, inStream);
                 if(opc == DATA)
                 {
-                    blockNum = ntohs(*(short*)(stream+2));
-                    printf("Received Block #%d of data: %d byte(s)\n",blockNum,n);
-                    fwrite(stream+4,1,n-4,fp); 
+                    blockNum = ntohs(*(short*)(inStream+2));
+                    printf("Received Block #%d of data: %d byte(s)\n",blockNum,recByte);
+                    fwrite(inStream+4,1,recByte-4,fp); 
                 }
                 blockNum++;
-            } while (n == 516);
+                // send ACK
+                bzero(outStream,SSIZE); 
+                serv_tftp->send_ack(serv_tftp, outStream, blockNum);    
+            } while (recByte == 516);
         }  
         fclose(fp);
     }
 
 }
 
+
 int main(int argc, char *argv[])
 {
-    struct tftp *serv_tftp = tftp_init(argv[0]);
+    // signal(SIGALRM, retxDATA); // set a signal hanlder
+    serv_tftp = tftp_init(argv[0]);
     if(argc == 3 && strcmp(argv[1],"-p") == 0)
     {
       serv_tftp->build_serv(serv_tftp, atoi(argv[2]));
@@ -113,7 +143,7 @@ int main(int argc, char *argv[])
       serv_tftp->build_serv(serv_tftp, -1);
     }
 
-    run_server(serv_tftp);
+    run_server();
 
     close(serv_tftp->sockfd);
     free(serv_tftp);

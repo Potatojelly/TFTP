@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <errno.h>     
+#include <signal.h> 
 
 #define SERV_UDP_PORT 61124
 #define SERV_HOST_ADDR "127.0.0.1" //"10.158.82.32"  
@@ -35,6 +36,7 @@ struct tftp
     int (*send_err)(struct tftp *my_tftp, char* packet, short errCode);
     int (*get_resp)(struct tftp *my_tftp, char* packet);
     int (*get_opc)(struct tftp *my_tftp, char* packet);
+
     
     int sockfd;
     struct sockaddr_in cli_addr;
@@ -43,6 +45,8 @@ struct tftp
     int servlen;
     int type;
     char* progname;
+
+    int count; 
 };
 
 struct tftp* tftp_init(char* name);
