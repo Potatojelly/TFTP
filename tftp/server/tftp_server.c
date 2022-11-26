@@ -2,6 +2,12 @@
 
 struct tftp* serv_tftp;
 
+//run_server: The server will run until shut down (^C) 
+//The server will receive a request to either write a file to the client 
+//or read a file the server has.
+//Preconditions: Any client must connect to the server using the right ip address
+//and the right port number. The server will then try to perform the client request.
+//Postconditions: The server send or received the data requested
 void run_server() 
 {   
     while(1) 
@@ -203,6 +209,10 @@ void run_server()
     }
 }
 
+//main: initialize the server connection
+//Precondtions: the server can receive an input for
+//its port number
+//PostCondition: close the server and free the server pointer
 int main(int argc, char *argv[])
 {
     serv_tftp = tftp_init(argv[0]);
