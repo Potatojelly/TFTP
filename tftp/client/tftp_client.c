@@ -4,6 +4,13 @@ struct tftp* cli_tftp;
 
 char opc[3];
 
+//run_client: The client will run until stopped (^C) or it will stop if a timeout/error occurs
+//The client will be allowed to write a file to the server, or read a file from the server
+//The data will be send in small packages/blocks of 512 bytes each
+//The client and server will acknowledge any incoming packet received
+//Preconditions: The client inptu is needed "-w filename" to write a file to the server or
+// "-r filename" to read a file from the server
+//Postconditions: If not error occurs, the desired packets will be send and received
 void run_client()
 {
     while(1)
@@ -233,6 +240,9 @@ void run_client()
     }
 }
 
+//main: initialize the client connection
+//Preconditions: the client can provide a specific port to send/receive data
+//Postconditions: the client connection is closed and free when done
 int main(int argc, char *argv[])
 {
     cli_tftp = tftp_init(argv[0]);
