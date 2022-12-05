@@ -25,8 +25,10 @@
 #define SERVER 1
 #define CLIENT 2
 
-#define SSIZE 600
+#define SSIZE 600                  // Stream Size
 #define MODE "octet"
+
+#define TIMEOUT 2
 
 int count;
 
@@ -71,6 +73,7 @@ struct tftp
 };
 
 struct tftp* tftp_init(char* name);
+void tftp_free(struct tftp *my_tftp);
 void build_servSocket(struct tftp *my_tftp, int port);
 void build_cliSocket(struct tftp *my_tftp, int port);
 void parse_request(char* fname, char* mode, char* packet);
