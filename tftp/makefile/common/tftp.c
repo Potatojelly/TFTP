@@ -228,6 +228,7 @@ int get_opcode(struct tftp *my_tftp, char* packet)
 // send DATA
 int send_data(struct tftp *my_tftp, FILE* fp, char* packet, short blockNum)
 {
+  
     int snByte1;
     int snByte2;
     *(short*) packet =  htons(DATA);
@@ -373,6 +374,11 @@ int send_error(struct tftp *my_tftp, char* packet, short errCode)
     strcpy(packet+4,errmsg); 
     n += strlen(errmsg) + 1;
   }
+  else if(errCode == 3){// filepath 
+    char errmsg[50] = "server: a filename is required, not a filepath";
+    strcpy(packet+4,errmsg); 
+    n += strlen(errmsg) + 1;
+  }
   snByte = sendto(my_tftp->sockfd,packet,n,0,(struct sockaddr *)&(my_tftp->cli_addr),my_tftp->clilen);
   if(snByte != n)
   {
@@ -489,4 +495,3 @@ void timeout_reset()
   count = 0;
   alarm(0);
 }
-
