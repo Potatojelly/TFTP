@@ -50,6 +50,16 @@ void* process_client(void* my_tftp)
     // extract opcode from the request
     serv_tftp->opcode = serv_tftp->get_opc(serv_tftp, serv_tftp->inStream);
     
+    //check the filename to make sure it is not a filepath
+    char * ptr;
+    ptr = strchr(serv_tftp->fileName, '/');
+    
+      if(ptr != nullptr){
+        bzero(serv_tftp->outStream,SSIZE);  
+        serv_tftp->send_err(serv_tftp,serv_tftp->outStream,3);
+        exit(0);
+      }
+      
     // process RRQ request
     if(serv_tftp->opcode == RRQ)
     {   
