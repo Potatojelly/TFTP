@@ -6,6 +6,7 @@ struct tftp* tftp_init(char* name)
 	struct tftp *my_tftp = malloc(sizeof(struct tftp));
   my_tftp->build_cli = build_cliSocket;
   my_tftp->build_serv = build_servSocket;
+  my_tftp->build_servThread = build_servThreadSocket;
   my_tftp->parse_req = parse_request;
   my_tftp->send_req = send_request;
   my_tftp->retxREQ = retxREQ;
@@ -57,7 +58,8 @@ void tftp_free(struct tftp *my_tftp)
 // build server socket
 void build_servSocket(struct tftp *my_tftp, int port)
 {
-  if(port < 0 || port >= 65535){
+
+  if(port < 0 || port > 65535){
     port = SERV_UDP_PORT;
   }
   
@@ -71,15 +73,7 @@ void build_servSocket(struct tftp *my_tftp, int port)
   bzero((char *) &(my_tftp->serv_addr), sizeof(my_tftp->serv_addr));
   my_tftp->serv_addr.sin_family = AF_INET;
   my_tftp->serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  if(port == 0)
-  {
-    my_tftp->serv_addr.sin_port = htons(0); // let OS set port number 
-  } 
-  else
-  {
-    my_tftp->serv_addr.sin_port = htons(port);
-  }
- 
+  my_tftp->serv_addr.sin_port = htons(port);
       
   if(bind(my_tftp->sockfd, (struct sockaddr *) &(my_tftp->serv_addr), my_tftp->servlen) < 0)
   {
@@ -92,10 +86,32 @@ void build_servSocket(struct tftp *my_tftp, int port)
   }
 }
 
+// build server thread socket
+void build_servThreadSocket(struct tftp *my_tftp)
+{
+  my_tftp->type = SERVER;
+  if((my_tftp->sockfd = socket(AF_INET,SOCK_DGRAM,0)) < 0)
+  {
+    printf("%s: can't open datagram socket\n",*(my_tftp->progname));
+    exit(0);
+  }
+  // set server address
+  bzero((char *) &(my_tftp->serv_addr), sizeof(my_tftp->serv_addr));
+  my_tftp->serv_addr.sin_family = AF_INET;
+  my_tftp->serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  my_tftp->serv_addr.sin_port = htons(0); // let OS pick randomly
+
+  if(bind(my_tftp->sockfd, (struct sockaddr *) &(my_tftp->serv_addr), my_tftp->servlen) < 0)
+  {
+    printf("%s: can't bind local address\n",my_tftp->progname);
+    exit(0);
+  }
+}
+
 // build client socket
 void build_cliSocket(struct tftp *my_tftp, int port)
 {
-  if(port < 0 || port >= 65535){
+  if(port < 0 || port > 65535){
     port = SERV_UDP_PORT;
   }
   
@@ -147,10 +163,12 @@ int send_request(struct tftp *my_tftp, int opcode, char* fname, char* mode, char
     if(opcode == RRQ)
     {
         *(short*)packet = htons(RRQ);
+        my_tftp->opcode = RRQ;
     } 
     else if (opcode == WRQ)
     {
         *(short*)packet = htons(WRQ);
+        my_tftp->opcode = WRQ;
     }
     // get filename 
     p = packet + 2;
@@ -228,10 +246,10 @@ int get_opcode(struct tftp *my_tftp, char* packet)
 // send DATA
 int send_data(struct tftp *my_tftp, FILE* fp, char* packet, short blockNum)
 {
-  
     int snByte1;
     int snByte2;
     *(short*) packet =  htons(DATA);
+    my_tftp->opcode = DATA;
     *(short*) (packet +2) = htons(blockNum);
 
     snByte1 = fread(packet+4,1,512,fp) + 4; // 4byte is for opcode and block number
@@ -273,6 +291,7 @@ int resend_data(struct tftp *my_tftp, char* packet,short blockNum)
 {
   int snByte1 = strlen(packet+4) + 4;
   int snByte2;
+  my_tftp->opcode = DATA;
 
   if(my_tftp->type == SERVER)
   {
@@ -311,6 +330,7 @@ int send_ack(struct tftp *my_tftp, char* packet, short blockNum)
 {
   int snByte;
   *(short*) packet =  htons(ACK);
+  my_tftp->opcode = ACK;
   *(short*) (packet +2) = htons(blockNum);
 
   if(my_tftp->type == SERVER)
@@ -353,6 +373,7 @@ int send_error(struct tftp *my_tftp, char* packet, short errCode)
   int n = 4;
   *(short*) packet =  htons(ERROR);
   *(short*) (packet +2) = htons(errCode);
+  my_tftp->opcode = ERROR;
   char dst_addr[INET_ADDRSTRLEN];
   int dst_port;
 
@@ -374,8 +395,15 @@ int send_error(struct tftp *my_tftp, char* packet, short errCode)
     strcpy(packet+4,errmsg); 
     n += strlen(errmsg) + 1;
   }
-  else if(errCode == 3){// filepath 
+  else if(errCode == 3) // filepath 
+  {
     char errmsg[50] = "server: a filename is required, not a filepath";
+    strcpy(packet+4,errmsg); 
+    n += strlen(errmsg) + 1;
+  }
+  else if(errCode == 4)
+  {
+    char errmsg[50] = "server: not valid mode request";
     strcpy(packet+4,errmsg); 
     n += strlen(errmsg) + 1;
   }
@@ -415,7 +443,7 @@ int retxDATA(struct tftp *my_tftp)
 {
     if(count < 10)
     {
-        my_tftp->snByte = my_tftp->resend_dta(my_tftp,my_tftp->outStream,my_tftp->blockNum); 
+        my_tftp->snByte = my_tftp->resend_dta(my_tftp,my_tftp->outStream, my_tftp->blockNum); 
         alarm(TIMEOUT); 
         return 0;
     }
@@ -439,7 +467,7 @@ int retxACK(struct tftp *my_tftp)
 {
     if(count < 10)
     {
-        my_tftp->send_ack(my_tftp, my_tftp->outStream, (my_tftp->blockNum-1) );
+        my_tftp->send_ack(my_tftp, my_tftp->outStream, my_tftp->blockNum );
         alarm(TIMEOUT); 
         return 0;
     }
@@ -450,11 +478,11 @@ int retxACK(struct tftp *my_tftp)
         alarm(0);
         fclose(my_tftp->fp);
         remove(my_tftp->fileName); 
+        my_tftp->fp = NULL;
         if(strcmp(my_tftp->progname,"./client") == 0)
         {
           exit(0);
         }
-        my_tftp->fp = NULL;
         return -1;
     }
 }
@@ -464,6 +492,7 @@ void handle_timeout(int signal)
 {
     count++;
     printf("Timeout! : %d\n",count);
+  //  printf("%d\n",errno);
 }
 
 // register alarm handler
@@ -495,3 +524,4 @@ void timeout_reset()
   count = 0;
   alarm(0);
 }
+

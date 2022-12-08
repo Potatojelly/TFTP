@@ -35,6 +35,7 @@ int count;
 struct tftp
 {
     void (*build_serv)(struct tftp *my_tftp, int port);
+    void (*build_servThread)(struct tftp *my_tftp);
     void (*build_cli)(struct tftp *my_tftp, int port);
     void (*parse_req)(char* fname, char* mode, char* packet);
     int (*send_req)(struct tftp *my_tftp, int opcode, char* fname, char* mode, char* packet);
@@ -75,6 +76,7 @@ struct tftp
 struct tftp* tftp_init(char* name);
 void tftp_free(struct tftp *my_tftp);
 void build_servSocket(struct tftp *my_tftp, int port);
+void build_servThreadSocket(struct tftp *my_tftp);
 void build_cliSocket(struct tftp *my_tftp, int port);
 void parse_request(char* fname, char* mode, char* packet);
 int send_request(struct tftp *my_tftp, int opcode, char* fname, char* mode, char* packet); 
