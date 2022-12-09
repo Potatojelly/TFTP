@@ -1,6 +1,12 @@
 #include "tftp.h"
 
-// initialize function pointers and variables of tftp
+/**
+ * struct tftp* tftp_init(char*)
+ * initializes common function pointers and variables for TFTP 
+ * 
+ * @ param char*
+ * @ return struct tftp*
+ */
 struct tftp* tftp_init(char* name) 
 {
 	struct tftp *my_tftp = malloc(sizeof(struct tftp));
@@ -44,7 +50,13 @@ struct tftp* tftp_init(char* name)
 	return my_tftp;
 }
 
-// deallocate tftp 
+/**
+ * void tftp_free(struct tftp*)
+ * deallocate struct tftp 
+ * 
+ * @ param char*
+ * @ return void
+ */
 void tftp_free(struct tftp *my_tftp)
 {
   if(my_tftp->fp != NULL)
@@ -55,7 +67,13 @@ void tftp_free(struct tftp *my_tftp)
   free(my_tftp);
 }
 
-// build server socket
+/**
+ * void build_servSocket(struct tftp*,int)
+ * // builds server socket that makes new connection
+ * 
+ * @ param struct tftp*, int
+ * @ return void
+ */
 void build_servSocket(struct tftp *my_tftp, int port)
 {
 
@@ -69,7 +87,7 @@ void build_servSocket(struct tftp *my_tftp, int port)
     printf("%s: can't open datagram socket\n",*(my_tftp->progname));
     exit(0);
   }
-  // set server address
+
   bzero((char *) &(my_tftp->serv_addr), sizeof(my_tftp->serv_addr));
   my_tftp->serv_addr.sin_family = AF_INET;
   my_tftp->serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -82,11 +100,18 @@ void build_servSocket(struct tftp *my_tftp, int port)
   }
   else
   {
-    printf("%s: PORT NUMBER:%d\n",my_tftp->progname,ntohs(my_tftp->serv_addr.sin_port)); // check server port num
+    // check server port# at the beginning
+    printf("%s: PORT NUMBER:%d\n",my_tftp->progname,ntohs(my_tftp->serv_addr.sin_port)); 
   }
 }
 
-// build server thread socket
+/**
+ * void build_servThreadSocket(struct tftp*)
+ * builds server sub thread socket that processes packet
+ * 
+ * @ param struct tftp*
+ * @ return void
+ */
 void build_servThreadSocket(struct tftp *my_tftp)
 {
   my_tftp->type = SERVER;
@@ -95,7 +120,7 @@ void build_servThreadSocket(struct tftp *my_tftp)
     printf("%s: can't open datagram socket\n",*(my_tftp->progname));
     exit(0);
   }
-  // set server address
+
   bzero((char *) &(my_tftp->serv_addr), sizeof(my_tftp->serv_addr));
   my_tftp->serv_addr.sin_family = AF_INET;
   my_tftp->serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -108,7 +133,13 @@ void build_servThreadSocket(struct tftp *my_tftp)
   }
 }
 
-// build client socket
+/**
+ * void build_cliSocket(struct tftp*,int)
+ * builds client socket that requests and processes packet
+ * 
+ * @ param struct tftp*, int
+ * @ return void
+ */
 void build_cliSocket(struct tftp *my_tftp, int port)
 {
   if(port < 0 || port > 65535){
@@ -139,11 +170,18 @@ void build_cliSocket(struct tftp *my_tftp, int port)
   }
   else
   {
-    printf("%s: PORT NUMBER:%d\n",my_tftp->progname,ntohs(my_tftp->serv_addr.sin_port)); // check port num
+    // check server port# that packet will be sent to
+    printf("%s: PORT NUMBER:%d\n",my_tftp->progname,ntohs(my_tftp->serv_addr.sin_port)); 
   }
 }
 
-// parse received request
+/**
+ * void parse_request(char*, char*, char* )
+ * parses request packet; extracts requested filename,mode from the packet
+ * 
+ * @ param char*, char*, char*
+ * @ return void
+ */
 void parse_request(char* fname, char* mode, char* packet)
 {
   char *p;
@@ -153,8 +191,13 @@ void parse_request(char* fname, char* mode, char* packet)
   strcpy(mode,p); // get MODE
 }
 
-// send request
-// returns how many bytes it sends
+/**
+ * int send_request(struct tftp *, int, char*, char*, char*)
+ * requests a RRQ or WRQ request 
+ * 
+ * @ param struct tftp *, int, char*, char*, char*
+ * @ return int - # of bytes sent
+ */
 int send_request(struct tftp *my_tftp, int opcode, char* fname, char* mode, char* packet ) 
 {
     int snByte;
@@ -199,7 +242,13 @@ int send_request(struct tftp *my_tftp, int opcode, char* fname, char* mode, char
     return snByte;
 }
 
-// get response
+/**
+ * int get_response(struct tftp* , char*)
+ * receives a packet
+ * 
+ * @ param struct tftp*, char*
+ * @ return int - # of bytes received
+ */
 int get_response(struct tftp *my_tftp, char* packet)
 {
   int recByte;
@@ -215,7 +264,13 @@ int get_response(struct tftp *my_tftp, char* packet)
   return recByte;
 }
 
-// get opcode
+/**
+ * int get_opcode(struct tftp* , char*)
+ * extract opcode type from the packet
+ * 
+ * @ param struct tftp*, char*
+ * @ return int - extracted opcode type
+ */
 int get_opcode(struct tftp *my_tftp, char* packet)
 {
   int opcode;
@@ -243,7 +298,13 @@ int get_opcode(struct tftp *my_tftp, char* packet)
   return opcode;
 }
 
-// send DATA
+/**
+ * int send_data(struct tftp*, FILE*, char*, short)
+ * sends DATA Packet
+ * 
+ * @ param struct tftp*, FILE*, char*, short
+ * @ return int - # of bytes sent
+ */
 int send_data(struct tftp *my_tftp, FILE* fp, char* packet, short blockNum)
 {
     int snByte1;
@@ -286,7 +347,13 @@ int send_data(struct tftp *my_tftp, FILE* fp, char* packet, short blockNum)
     return snByte2;
 }
 
-// resend DATA; It doesn't continue to read from the file
+/**
+ * int resend_data(struct tftp*, char*, short)
+ * resends DATA packet sent before; doesn't read the file from it left off
+ * 
+ * @ param struct tftp*, char*, short
+ * @ return int - # of bytes sent
+ */
 int resend_data(struct tftp *my_tftp, char* packet,short blockNum)
 {
   int snByte1 = strlen(packet+4) + 4;
@@ -325,7 +392,13 @@ int resend_data(struct tftp *my_tftp, char* packet,short blockNum)
   return snByte2;
 }
 
-// send ACK
+/**
+ * int send_ack(struct tftp*, char*, short)
+ * sends ACK packet
+ * 
+ * @ param struct tftp*, char*, short
+ * @ return int - # of bytes sent
+ */
 int send_ack(struct tftp *my_tftp, char* packet, short blockNum)
 {
   int snByte;
@@ -366,7 +439,13 @@ int send_ack(struct tftp *my_tftp, char* packet, short blockNum)
   return snByte;
 }
 
-// send ERROR
+/**
+ * int send_error(struct tftp*, char*, short)
+ * sends ERROR packet
+ * 
+ * @ param struct tftp*, char*, short
+ * @ return int - # of bytes sent
+ */
 int send_error(struct tftp *my_tftp, char* packet, short errCode)
 {
   int snByte;
@@ -401,7 +480,7 @@ int send_error(struct tftp *my_tftp, char* packet, short errCode)
     strcpy(packet+4,errmsg); 
     n += strlen(errmsg) + 1;
   }
-  else if(errCode == 4)
+  else if(errCode == 4) // invalid mode request
   {
     char errmsg[50] = "server: not valid mode request";
     strcpy(packet+4,errmsg); 
@@ -420,7 +499,13 @@ int send_error(struct tftp *my_tftp, char* packet, short errCode)
   return snByte;
 }
 
-// retransmit REQ
+/**
+ * void retx_REQ(struct tftp*)
+ * resends a RRQ or WRQ packet when a timeout occurs
+ * 
+ * @ param struct tftp*
+ * @ return void
+ */
 void retxREQ(struct tftp *my_tftp)
 {
     if(count < 10)
@@ -438,7 +523,13 @@ void retxREQ(struct tftp *my_tftp)
     }
 }
 
-// retransmit DATA
+/**
+ * int retx_DATA(struct tftp*)
+ * resends a DATA packet when a timeout occurs
+ * 
+ * @ param struct tftp*
+ * @ return int - if 10 consecutive timesouts has occured,returns -1
+ */
 int retxDATA(struct tftp *my_tftp)
 {
     if(count < 10)
@@ -462,7 +553,13 @@ int retxDATA(struct tftp *my_tftp)
     }
 }
 
-// retransmit ACK
+/**
+ * int retx_DATA(struct tftp*)
+ * resends a ACK packet when a timeout occurs
+ * 
+ * @ param struct tftp*
+ * @ return int - if 10 consecutive timesouts has occured,returns -1
+ */
 int retxACK(struct tftp *my_tftp)
 {
     if(count < 10)
@@ -473,7 +570,7 @@ int retxACK(struct tftp *my_tftp)
     }
     else
     {
-        printf("%s: 10 consecutive timesouts has occurd.\n",my_tftp->progname);
+        printf("%s: 10 consecutive timesouts has occured.\n",my_tftp->progname);
         count = 0;
         alarm(0);
         fclose(my_tftp->fp);
@@ -487,7 +584,13 @@ int retxACK(struct tftp *my_tftp)
     }
 }
 
-// alarm handler
+/**
+ * void handle_timeout(int)
+ * count the numbers that timeouts have occured
+ * 
+ * @ param int
+ * @ return void 
+ */
 void handle_timeout(int signal)
 {
     count++;
@@ -495,7 +598,13 @@ void handle_timeout(int signal)
   //  printf("%d\n",errno);
 }
 
-// register alarm handler
+/**
+ * int register_handler(struct tftp*)
+ * registers a signal hanlder of SIGLARM
+ * 
+ * @ param struct tftp*
+ * @ return int - if succeed returns 0, otherwise returns -1
+ */
 int register_handler(struct tftp *my_tftp)
 {
     int rt_value = 0;
@@ -518,7 +627,13 @@ int register_handler(struct tftp *my_tftp)
     return 0;
 }
 
-// reset timeout
+/**
+ * void timeout_reset()
+ * resets the number that timeouts have occured and expires the alarm signal 
+ * 
+ * @ param 
+ * @ return void
+ */
 void timeout_reset()
 {
   count = 0;

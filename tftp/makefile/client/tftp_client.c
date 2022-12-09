@@ -3,8 +3,16 @@
 struct tftp* cli_tftp;
 char* opc;
 char* fileName;
-bool check = false; // for TIMEOUT TEST
+// bool check = false; 
 
+
+/**
+ * void run_client()
+ * requests a RRQ or WRQ request, processes or sends DATA, ACK, and ERROR from or to server   
+ * 
+ * @ param struct tftp* 
+ * @ return void
+ */
 void run_client()
 {
      cli_tftp->blockNum = 0;
@@ -23,8 +31,8 @@ void run_client()
      // request RRQ
     if(cli_tftp->opcode == RRQ)   
     {
-        // open file
-        if(access(cli_tftp->fileName,F_OK) == 0)                                                                // check if the file already exists
+        // check if the file already exists
+        if(access(cli_tftp->fileName,F_OK) == 0)                                                                
         {
             printf("client: file is already exist error(overwrite warning)\n");
             exit(0);
@@ -34,31 +42,33 @@ void run_client()
             cli_tftp->fp = fopen(cli_tftp->fileName,"w");
             // send RRQ 
             bzero(cli_tftp->outStream,SSIZE);                                                                    
-            cli_tftp->snByte= cli_tftp->send_req(cli_tftp, cli_tftp->opcode, cli_tftp->fileName, MODE, cli_tftp->outStream);
+            cli_tftp->snByte = cli_tftp->send_req(cli_tftp, cli_tftp->opcode, cli_tftp->fileName, MODE, cli_tftp->outStream);
             alarm(TIMEOUT);
         }
     }
     // request WRQ
     else if(cli_tftp->opcode == WRQ)   
     {
-        // open file
-        if(access(cli_tftp->fileName,F_OK) == 0)                                                                 // check if the file exists
+        if(access(cli_tftp->fileName,F_OK) == 0)                                                                
         {
-            if(access(cli_tftp->fileName,R_OK) == 0)                                                             // check if the file can be read
+            if(access(cli_tftp->fileName,R_OK) == 0)                                                             
             {
                 cli_tftp->fp = fopen(cli_tftp->fileName,"r");
                 // send WRQ 
                 bzero(cli_tftp->outStream,SSIZE); 
                 cli_tftp->send_req(cli_tftp, cli_tftp->opcode, cli_tftp->fileName, MODE, cli_tftp->outStream);
+                cli_tftp->snByte = 516; // to prevent stop process
                 alarm(TIMEOUT);
             }
-            else                                                                                                 // client has no permission to read the file
+            // no permission to read the file
+            else                                                                                                 
             {
                 printf("client: no permission to open the file error\n");
                 exit(0);
             }
         }
-        else                                                                                                     // client doesn't have the file to write to server
+        // doesn't have the file to write to server
+        else                                                                                                     
         {
             printf("client: file not found error\n");
             exit(0);
@@ -70,7 +80,7 @@ void run_client()
         // wait response
         bzero(cli_tftp->inStream,SSIZE);
         cli_tftp->recByte = cli_tftp->get_resp(cli_tftp, cli_tftp->inStream);
-        // data loss control
+        // packet loss control
         if(cli_tftp->recByte < 0)
         {
             if(errno == EINTR)
@@ -103,33 +113,30 @@ void run_client()
             cli_tftp->timeout_reset();
         }
 
-        // extract opcode from the response
         cli_tftp->opcode = cli_tftp->get_opc(cli_tftp, cli_tftp->inStream);
-
-        // check opcode of response
 
         if(cli_tftp->opcode == DATA)
         {
-            // Next DATA to corresponding sent ACK
+            // DATA corresponding to ACK sent previous
             if((cli_tftp->blockNum+1) == ntohs(*(short*)(cli_tftp->inStream+2)))
             {
                 cli_tftp->blockNum = ntohs(*(short*)(cli_tftp->inStream+2));
                 printf("Received Block #%d of data: %d byte(s)\n",cli_tftp->blockNum,(cli_tftp->recByte-4));
-                fwrite(cli_tftp->inStream+4,1,cli_tftp->recByte-4,cli_tftp->fp);                                 // make a file with received DATA 
+                fwrite(cli_tftp->inStream+4,1,cli_tftp->recByte-4,cli_tftp->fp);                                 
             }
-            // discard duplicated DATA: send ACK
+            // hanlde duplicated DATA; sends ACK
             else if(cli_tftp->blockNum > ntohs(*(short*)(cli_tftp->inStream+2)))
             {
                 printf("Received Block #%d of data: %d byte(s)\n",cli_tftp->blockNum,(cli_tftp->recByte-4));
                 continue;
             }
-            // TIMEOUT CASE2 TEST  - server doesn't receive ACK and keeps sending DATA
+
+            // TIMEOUT CASE3 TEST  - server doesn't receive ACK and keeps sending DATA
             // if(cli_tftp->blockNum == 5 && !check)
             // {
             //     check = true; // to prevent to sleep as much as times that it receives duplicated DATA
             //     sleep(8);
             // }
-            // send ACK
             bzero(cli_tftp->outStream,SSIZE); 
             cli_tftp->snByte = cli_tftp->send_ack(cli_tftp, cli_tftp->outStream, cli_tftp->blockNum);
             if(cli_tftp->recByte == 516)
@@ -144,7 +151,7 @@ void run_client()
         }
         else if(cli_tftp->opcode == ACK)
         {
-            // ACK to corresponding sent DATA
+            // ACK corresponding to DATA sent previous
             if(cli_tftp->blockNum == ntohs(*(short*)(cli_tftp->inStream+2)))
             {
                 printf("Received Ack #%d\n",cli_tftp->blockNum);
@@ -155,41 +162,22 @@ void run_client()
                 alarm(TIMEOUT);
                 continue;
             }
-            // send next DATA
+
             // TIMEOUT CASE4 TEST - server doesn't receive DATA and keeps sending ACK
             // if(cli_tftp->blockNum == 5)
             // {
             //     sleep(8);
             // }
 
+            if(cli_tftp->snByte < 516)
+            {
+                break;
+            }
+
             cli_tftp->blockNum++;
             bzero(cli_tftp->outStream,SSIZE);   
             cli_tftp->snByte = cli_tftp->send_dta(cli_tftp,cli_tftp->fp,cli_tftp->outStream,cli_tftp->blockNum);
-            if(cli_tftp->snByte == 516)
-            {
-                alarm(TIMEOUT);
-            }
-            // last DATA to send
-            else
-            {
-                alarm(TIMEOUT);
-                // wait response
-                bzero(cli_tftp->inStream,SSIZE);
-                cli_tftp->recByte = cli_tftp->get_resp(cli_tftp, cli_tftp->inStream);
-                // extract opcode from the request
-                cli_tftp->opcode = cli_tftp->get_opc(cli_tftp, cli_tftp->inStream);
-                // ACK to corresponding sent DATA
-                if(cli_tftp->blockNum == ntohs(*(short*)(cli_tftp->inStream+2)))
-                {
-                    printf("Received Ack #%d\n",cli_tftp->blockNum);
-                }
-                // discard duplicated ACK
-                else if(cli_tftp->blockNum > ntohs(*(short*)(cli_tftp->inStream+2)))
-                {
-                    alarm(TIMEOUT);
-                }
-                break;
-            }
+            alarm(TIMEOUT);
         }
         else if(cli_tftp->opcode == ERROR)
         {
@@ -202,9 +190,11 @@ void run_client()
                 fclose(cli_tftp->fp);
                 cli_tftp->fp = NULL;
             }
-            if(errCode == 0 || errCode == 2)                                                                 // not found or no permission
+            // server hasn't found or has no permission to the requested file 
+            if(errCode == 0 || errCode == 2)                                                                 
             {
-                remove(cli_tftp->fileName);                                                                  // remove the file created to read from server
+                 // remove the file created to read from server
+                remove(cli_tftp->fileName);                                                                 
             }
             exit(0);
         }
@@ -215,29 +205,39 @@ void run_client()
         fclose(cli_tftp->fp);
         cli_tftp->fp = NULL;
     }
-    printf("Finished!\n");
+    printf("Complete!\n");
 }
 
-
-//############################################################################
-
-
+/**
+ * int main(int, char*)
+ * recevies port#, request type at runtime, builds UDP client socket, and starts run TFTP client
+ * 
+ * @ param int, char*
+ * @ return 0
+ * 
+*/
 int main(int argc, char *argv[])
 {
     cli_tftp = tftp_init(argv[0]);
 
     // set client port number, request type, and filename 
-    if(argc == 5 && strcmp(argv[1],"-p") == 0)
+    if(argc == 3 && (strcmp(argv[1],"-r") == 0 || strcmp(argv[1],"-w") == 0) )
     {
-      cli_tftp->build_cli(cli_tftp, atoi(argv[2]));             // set client ip and port and bind them with a socket
+      // set client ip and port and bind them with a socket  
+      cli_tftp->build_cli(cli_tftp, -1); // builds with a default port#
+      opc = argv[1];
+      fileName = argv[2];
+    }
+    else if(argc == 5 && strcmp(argv[1],"-p") == 0 && ((strcmp(argv[1],"-r") == 0 || strcmp(argv[1],"-w") == 0)))
+    {
+      cli_tftp->build_cli(cli_tftp, atoi(argv[2]));             
       opc = argv[3];
       fileName = argv[4];
     }
     else
     {
-      cli_tftp->build_cli(cli_tftp, -1);
-      opc = argv[1];
-      fileName = argv[2];
+        printf("client:invalid command error\n");
+        exit(0);
     }
 
     // register signal handler
