@@ -1,4 +1,6 @@
-# CSS432-TFTP_Project
+# TFTP_Project  
+
+TFTP (Trivial File Transfer Protocol) is a simple, lightweight file transfer protocol used for transferring files over a network. It operates on the principle of UDP (User Datagram Protocol), making it faster but less reliable than more complex protocols like FTP (File Transfer Protocol). Here are some key characteristics and uses of TFTP
 
 Step-By-Step Instruction to sucessfully run the Server and the Client.
 
@@ -41,4 +43,12 @@ Directory Tree <br/>
        It will run with a default server port# 61124 <br/> 
        ---Option--- <br/>
        If you gave a specific Port# to Server, you also must give an option "-p Port#" with the same server Port# <br/>
-       Eg)```$./client -p 12345 -r hello.txt ``` or ```$./client -p 12345 -w hello.txt ``` 
+       Eg)```$./client -p 12345 -r hello.txt ``` or ```$./client -p 12345 -w hello.txt ```
+
+   # Challenge
+   We spent the longest time to complete Step 5. After creating a new thread to handle multiple
+   clients simultaneously, the logic handling packet loss that worked well before started to make
+   bugs. The main reason was SIGALRM, which is needed to handle timeouts, doesn’t go to a
+   sub-thread. The system call only goes to the main thread if we take extra action for it. We solved
+   this problem by using a signal mask. By blocking the main thread to receive SIGALRM and
+   setting only a sub-thread to receive it from the kernel, we could make timeouts work well.
